@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Board Game Cafe - mPOS</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font Awesome CDN for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <!-- Custom Stylesheet -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div id="pos-container" class="container mx-auto p-4 md:p-8">
+        <header class="text-center mb-10">
+            <h1 class="text-4xl md:text-5xl font-bold text-amber-400">The Board Game Cafe</h1>
+            <p class="text-gray-400 mt-2">4th Floor, Tirumala Estate, Himayathnagar, Hyderabad-500029 | Ph: 7386425266</p>
+            <p class="text-gray-400 mt-1">GST: ABCDE12345FGHIJ | FSSAI: 12345678901234</p>l̥ō
+        </header>
+
+        <!-- =========== Table Management View =========== -->
+        <div id="tableView" class="view active">
+             <div class="flex justify-end mb-4">
+                <button id="download-report-btn" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-500 transition-colors">
+                    <i class="fa-solid fa-download mr-2"></i>Download Sales Report
+                </button>
+            </div>
+            <div id="table-grid-container" class="table-grid">
+                <!-- Tables will be dynamically inserted here -->
+            </div>
+        </div>
+
+        <!-- =========== Menu & KOT View =========== -->
+        <div id="menuView" class="view">
+             <button onclick="switchView('tableView')" class="mb-6 bg-amber-600 text-white px-4 py-2 rounded-md hover:bg-amber-500 transition-colors">&larr; Back to Tables</button>
+            <div class="grid grid-cols-1 lg:grid-cols-10 gap-8">
+                <!-- Categories Sidebar -->
+                <aside class="lg:col-span-2">
+                    <div class="sticky top-8 bg-gray-800 p-4 rounded-lg shadow-lg">
+                        <h2 class="text-xl font-bold text-amber-400 border-b border-gray-600 pb-3 mb-4">Categories</h2>
+                        <nav id="category-nav" class="space-y-2">
+                            <!-- Category links will be dynamically generated -->
+                        </nav>
+                    </div>
+                </aside>
+
+                <!-- Menu Sections -->
+                <main class="lg:col-span-5">
+                    <div id="menu-items-container">
+                        <!-- Menu items will be dynamically injected here -->
+                    </div>
+                </main>
+                
+                <!-- KOT / Order Grid -->
+                <div class="lg:col-span-3">
+                    <div class="sticky top-8 bg-gray-800 p-6 rounded-lg shadow-lg">
+                        <h2 id="kot-header" class="text-2xl font-bold text-amber-400 border-b border-gray-600 pb-3 mb-4">Order</h2>
+                        <div id="kot-items" class="space-y-3 mb-6 min-h-[200px] max-h-[40vh] overflow-y-auto text-sm">
+                            <p class="text-gray-400">Select items to add them here.</p>
+                        </div>
+                        <div class="border-t border-gray-600 pt-4 space-y-4">
+                            <div class="flex justify-between items-center text-lg font-semibold">
+                                <span>Total</span>
+                                <span id="kot-total-price">₹0.00</span>
+                            </div>
+                            <button onclick="saveKOT()" class="w-full bg-blue-600 text-white py-2 rounded-lg font-bold hover:bg-blue-500 transition-colors">
+                                Save KOT
+                            </button>
+                            <button onclick="showBillingView()" class="w-full bg-green-600 text-white py-3 rounded-lg font-bold hover:bg-green-500 transition-colors">
+                                Go to Bill
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- =========== Billing Modal (Receipt Style) =========== -->
+    <div id="billingView" class="modal-overlay view">
+        <div class="receipt-container">
+            <div class="receipt-header">
+                <h2>THE BOARDGAME CAFE</h2>
+                <p>4th Floor, Tirumala Estate, Himayathnagar</p>
+                <p>Hyderabad-500029</p>
+                <p>Ph: 7386425266</p>
+            </div>
+            <div class="mt-4">
+                 <p class="text-xs">GST: ABCDE12345FGHIJ</p>
+                 <p class="text-xs">FSSAI: 12345678901234</p>
+            </div>
+            <div class="mt-4">
+                <table class="receipt-table w-full">
+                    <thead>
+                        <tr>
+                            <th colspan="2">Cashier: Mithil</th>
+                            <th colspan="2" class="text-right" id="bill-table-number">Table: </th>
+                        </tr>
+                        <tr>
+                            <th>Item</th>
+                            <th class="text-right">Qty</th>
+                            <th class="text-right">Price</th>
+                            <th class="text-right">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody id="billing-items-tbody">
+                        <!-- Billing items will be dynamically inserted here -->
+                    </tbody>
+                </table>
+            </div>
+            <div class="dotted-border">
+                <table class="summary-table w-full">
+                    <tbody>
+                        <tr><td>Subtotal:</td><td class="text-right" id="bill-subtotal">₹0.00</td></tr>
+                        <tr><td>GST (5%):</td><td class="text-right" id="bill-gst">₹0.00</td></tr>
+                        <tr class="font-bold text-lg"><td>Grand Total:</td><td class="text-right" id="bill-grandtotal">₹0.00</td></tr>
+                    </tbody>
+                </table>
+            </div>
+             <div class="mt-4">
+                <label for="payment-mode" class="block mb-1 text-sm font-medium">Payment Mode</label>
+                <select id="payment-mode" class="bg-gray-200 border border-gray-400 text-gray-800 text-sm rounded-lg focus:ring-amber-500 focus:border-amber-500 block w-full p-2.5">
+                    <option>Cash</option>
+                    <option>Card</option>
+                    <option>UPI</option>
+                </select>
+            </div>
+            <div class="receipt-footer mt-6">
+                <p>Thanks For Visiting!</p>
+                <p>Please Visit Again!</p>
+            </div>
+            <div class="mt-6 flex justify-between gap-4">
+                <button onclick="switchView('menuView')" class="w-full bg-gray-600 text-white py-2 rounded-lg hover:bg-gray-500 transition-colors">Back</button>
+                <button onclick="settleBill()" class="w-full bg-green-600 text-white py-2 rounded-lg font-bold hover:bg-green-500 transition-colors">Settle Bill</button>
+            </div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
