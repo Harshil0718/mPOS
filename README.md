@@ -1,1 +1,3 @@
 # mPOS
+user:admin
+pass:1234
