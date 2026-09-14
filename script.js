@@ -8,13 +8,13 @@ document.addEventListener('DOMContentLoaded', () => {
         selectedTableId: null,
         gstRate: 0.05,
         totalTables: 30,
-        currentUser: null,
+        isAuthenticated: false,
         runtimeInterval: null
     };
 
     let isSettlingBill = false;
 
-    // --- DOM ELEMENT SELECTORS ---
+    // --- DOM SELECTORS ---
     const views = {
         tableView: document.getElementById('tableView'),
         menuView: document.getElementById('menuView'),
@@ -30,7 +30,6 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const billItemsTbody = document.getElementById('billing-items-tbody');
     const billTableNumber = document.getElementById('bill-table-number');
-    const billCashierName = document.getElementById('bill-cashier-name');
     const billDurationText = document.getElementById('bill-duration-text');
     const billSubtotal = document.getElementById('bill-subtotal');
     const billGst = document.getElementById('bill-gst');
@@ -41,10 +40,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const downloadReportBtn = document.getElementById('download-report-btn');
 
     const authModal = document.getElementById('authModal');
-    const loginForm = document.getElementById('loginForm');
-    const authUsername = document.getElementById('authUsername');
     const authPin = document.getElementById('authPin');
-    const activeCashierLabel = document.getElementById('activeCashierLabel');
+    const authErrorMsg = document.getElementById('authErrorMsg');
 
     const itemModal = document.getElementById('itemModal');
     const addItemForm = document.getElementById('addItemForm');
@@ -52,7 +49,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const newItemName = document.getElementById('newItemName');
     const newItemPrice = document.getElementById('newItemPrice');
 
-    // --- FULL MENU DATA WITH EXPLICIT IDs ---
+    // --- MENU REPOSITORY ---
     const menuData = {
         soups: { 
             name: "Soups", 
@@ -263,8 +260,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 { id: "dd_17", name: "Choco Lava Cake", price: 229 }
             ] 
         },
-        mocktails: {
-            name: "Mocktails",
+        mocktails: { 
+            name: "Mocktails", 
             items: [
                 { id: "mt_1", name: "Sunset Elixir", price: 209 },
                 { id: "mt_2", name: "Crimson Bloom", price: 219 },
@@ -281,43 +278,55 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // --- AUTHENTICATION ---
-    const checkAuth = () => {
-        const savedUser = sessionStorage.getItem('bgc_pos_user');
-        if (savedUser) {
-            restaurantState.currentUser = JSON.parse(savedUser);
-            authModal.classList.add('hidden');
-            activeCashierLabel.textContent = `Staff: ${restaurantState.currentUser.name}`;
+    // --- PIN AUTHENTICATION (0718) ---
+    window.submitLogin = () => {
+        const pin = authPin ? authPin.value.trim() : '';
+
+        if (pin === "0718") {
+            restaurantState.isAuthenticated = true;
+            sessionStorage.setItem('bgc_pos_auth', 'true');
+            if (authModal) authModal.style.display = 'none';
+            if (authErrorMsg) authErrorMsg.classList.add('hidden');
+            if (authPin) authPin.value = '';
+            renderTables();
         } else {
-            authModal.classList.remove('hidden');
+            if (authErrorMsg) authErrorMsg.classList.remove('hidden');
+            if (authPin) {
+                authPin.value = '';
+                authPin.focus();
+            }
         }
     };
 
-    loginForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const pin = authPin.value.trim();
-        const name = authUsername.value.trim();
-
-        if (pin === "1234") {
-            const user = { name: name || "Staff", role: "Cashier", loggedInAt: Date.now() };
-            restaurantState.currentUser = user;
-            sessionStorage.setItem('bgc_pos_user', JSON.stringify(user));
-            authModal.classList.add('hidden');
-            activeCashierLabel.textContent = `Staff: ${user.name}`;
-            renderTables();
-        } else {
-            alert("Invalid PIN. Use 1234.");
+    authPin?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            window.submitLogin();
         }
     });
 
-    window.handleLogout = () => {
-        sessionStorage.removeItem('bgc_pos_user');
-        restaurantState.currentUser = null;
-        authModal.classList.remove('hidden');
-        authPin.value = '';
+    const checkAuth = () => {
+        const savedAuth = sessionStorage.getItem('bgc_pos_auth');
+        if (savedAuth === 'true') {
+            restaurantState.isAuthenticated = true;
+            if (authModal) authModal.style.display = 'none';
+        } else {
+            restaurantState.isAuthenticated = false;
+            if (authModal) authModal.style.display = 'flex';
+        }
     };
 
-    // --- RUNTIME & DURATION HELPERS ---
+    window.handleLogout = () => {
+        sessionStorage.removeItem('bgc_pos_auth');
+        restaurantState.isAuthenticated = false;
+        if (authModal) authModal.style.display = 'flex';
+        if (authPin) {
+            authPin.value = '';
+            authPin.focus();
+        }
+    };
+
+    // --- TIMERS ---
     const formatDuration = (startTime) => {
         if (!startTime) return "00m 00s";
         const diffInSeconds = Math.max(0, Math.floor((Date.now() - startTime) / 1000));
@@ -329,7 +338,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const startGlobalTimer = () => {
         if (restaurantState.runtimeInterval) clearInterval(restaurantState.runtimeInterval);
         restaurantState.runtimeInterval = setInterval(() => {
-            // Update table grid elapsed labels
             document.querySelectorAll('[data-table-timer]').forEach(el => {
                 const tableId = parseInt(el.getAttribute('data-table-timer'), 10);
                 const table = getTableById(tableId);
@@ -338,21 +346,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
-            // Update menu view timer
             if (restaurantState.currentView === 'menuView' && restaurantState.selectedTableId) {
                 const selectedTable = getTableById(restaurantState.selectedTableId);
                 if (selectedTable && selectedTable.sessionStart) {
-                    kotTimer.innerHTML = `<i class="fa-regular fa-clock"></i> <span>${formatDuration(selectedTable.sessionStart)}</span>`;
+                    kotTimer.innerHTML = `<i class="fa-regular fa-clock text-[10px]"></i> <span>${formatDuration(selectedTable.sessionStart)}</span>`;
                 }
             }
         }, 1000);
     };
 
-    // --- VIEW SWITCHER ---
+    // --- VIEW CONTROLLER ---
     window.switchView = (viewName) => {
         restaurantState.currentView = viewName;
-        Object.values(views).forEach(view => {
-            if (view) view.classList.remove('active');
+        Object.keys(views).forEach(key => {
+            if (views[key]) views[key].classList.remove('active');
         });
         if (views[viewName]) {
             views[viewName].classList.add('active');
@@ -365,7 +372,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // --- TABLE MANAGEMENT ---
+    // --- TABLE OPERATIONS ---
     const getTableById = (id) => restaurantState.tables.find(t => t.id === Number(id));
 
     const initializeTables = () => {
@@ -373,7 +380,7 @@ document.addEventListener('DOMContentLoaded', () => {
         for (let i = 1; i <= restaurantState.totalTables; i++) {
             restaurantState.tables.push({
                 id: i,
-                status: 'available',
+                status: 'available', // available | occupied | reserved | billing
                 order: [],
                 total: 0,
                 sessionStart: null
@@ -390,4 +397,5 @@ document.addEventListener('DOMContentLoaded', () => {
             if (table.status === 'available') table.sessionStart = null;
         } else if (table.status === 'available' || table.status === 'occupied') {
             table.status = 'reserved';
-            if (!table.sessionStart) table.sessionStart = Date.now
+            if (!table.sessionStart) table.sessionStart = Date.now();
+     
