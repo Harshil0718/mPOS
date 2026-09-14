@@ -1,3 +1,3 @@
-# mPOS
-user:admin
-pass:1234
+#mPOS
+
+Login Code :0718
