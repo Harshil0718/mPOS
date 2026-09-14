@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The Board Game Cafe - Smart mPOS</title>
+    <title>The Board Game Cafe - mPOS</title>
 
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -12,36 +12,34 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
     <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 
     <!-- Custom Stylesheet -->
     <link rel="stylesheet" href="style.css">
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen antialiased selection:bg-amber-500 selection:text-black">
+<body class="bg-neutral-950 text-neutral-100 min-h-screen antialiased selection:bg-amber-400 selection:text-neutral-950">
 
     <!-- =========== Authentication Overlay =========== -->
-    <div id="authModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
-        <div class="glass-card w-full max-w-md p-8 rounded-2xl shadow-2xl border border-white/10 text-center relative overflow-hidden animate-fade-in">
-            <div class="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-400 mx-auto flex items-center justify-center text-2xl mb-4 shadow-[0_0_20px_rgba(245,158,11,0.25)]">
-                <i class="fa-solid fa-dice-d20"></i>
+    <div id="authModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-950/80 backdrop-blur-md">
+        <div class="pos-panel w-full max-w-sm p-8 rounded-2xl border border-neutral-800 shadow-2xl text-center">
+            <div class="w-14 h-14 rounded-xl bg-neutral-900 border border-neutral-800 text-amber-400 mx-auto flex items-center justify-center text-xl mb-4">
+                <i class="fa-solid fa-lock"></i>
             </div>
-            <h2 class="text-2xl font-bold text-white tracking-wide">Cashier Sign In</h2>
-            <p class="text-slate-400 text-sm mt-1">Sign in to manage tables and orders</p>
+            <h2 class="text-xl font-semibold text-white tracking-tight">Security Access</h2>
+            <p class="text-neutral-400 text-xs mt-1">Enter your 4-digit terminal passkey</p>
             
-            <form id="loginForm" class="mt-6 space-y-4 text-left">
+            <div class="mt-6 space-y-4 text-left">
                 <div>
-                    <label class="block text-xs uppercase font-semibold text-slate-400 mb-1 tracking-wider">Cashier Name</label>
-                    <input type="text" id="authUsername" class="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 transition" placeholder="e.g. Mithil" value="Mithil" required>
+                    <input type="password" id="authPin" maxlength="4" autofocus
+                        class="w-full px-4 py-3 rounded-xl bg-neutral-900 border border-neutral-800 text-white placeholder-neutral-600 focus:outline-none focus:border-amber-400/80 focus:ring-1 focus:ring-amber-400/80 transition tracking-[0.6em] text-center font-mono text-xl" 
+                        placeholder="••••">
+                    <p id="authErrorMsg" class="text-xs text-rose-400 mt-2 text-center hidden">Incorrect security PIN</p>
                 </div>
-                <div>
-                    <label class="block text-xs uppercase font-semibold text-slate-400 mb-1 tracking-wider">Access PIN</label>
-                    <input type="password" id="authPin" maxlength="6" class="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 transition tracking-widest text-center" placeholder="••••" value="1234" required>
-                    <p class="text-[11px] text-slate-500 mt-1">Default PIN: 1234</p>
-                </div>
-                <button type="submit" class="w-full mt-2 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-bold hover:brightness-110 active:scale-[0.99] transition shadow-lg shadow-amber-500/20">
-                    Unlock System
+                <button type="button" onclick="submitLogin()" 
+                    class="w-full py-3 rounded-xl bg-amber-400 hover:bg-amber-300 text-neutral-950 font-semibold text-sm transition active:scale-[0.99]">
+                    Unlock Terminal
                 </button>
-            </form>
+            </div>
         </div>
     </div>
 
@@ -49,23 +47,21 @@
     <div id="pos-container" class="container mx-auto p-4 md:p-8 max-w-7xl">
         
         <!-- Header Bar -->
-        <header class="flex flex-col md:flex-row justify-between items-center pb-6 mb-8 border-b border-slate-800 gap-4">
+        <header class="flex flex-col md:flex-row justify-between items-center pb-6 mb-8 border-b border-neutral-900 gap-4">
             <div class="text-center md:text-left">
                 <div class="flex items-center gap-3 justify-center md:justify-start">
-                    <span class="text-amber-400 text-3xl"><i class="fa-solid fa-chess-knight"></i></span>
-                    <h1 class="text-3xl md:text-4xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-amber-400 to-amber-200">
-                        The Board Game Cafe
-                    </h1>
+                    <span class="text-amber-400 text-2xl"><i class="fa-solid fa-chess-knight"></i></span>
+                    <h1 class="text-2xl font-bold tracking-tight text-white">The Board Game Cafe</h1>
                 </div>
-                <p class="text-xs text-slate-400 mt-1">4th Floor, Tirumala Estate, Himayathnagar, Hyd | GST: ABCDE12345FGHIJ</p>
+                <p class="text-xs text-neutral-400 mt-1">4th Floor, Tirumala Estate, Himayathnagar, Hyd | GST: ABCDE12345FGHIJ</p>
             </div>
 
             <div class="flex items-center gap-3">
-                <div class="px-4 py-2 rounded-full border border-slate-700 bg-slate-900/60 text-xs flex items-center gap-2">
-                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                    <span id="activeCashierLabel" class="font-semibold text-slate-300">Staff: Mithil</span>
+                <div class="px-3.5 py-1.5 rounded-full border border-neutral-800 bg-neutral-900 text-xs flex items-center gap-2">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                    <span class="font-medium text-neutral-300">Terminal 01</span>
                 </div>
-                <button onclick="handleLogout()" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs font-semibold transition" title="Log Out">
+                <button onclick="handleLogout()" class="px-3 py-1.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 text-neutral-400 hover:text-white border border-neutral-800 text-xs font-medium transition" title="Lock Terminal">
                     <i class="fa-solid fa-arrow-right-from-bracket"></i>
                 </button>
             </div>
@@ -76,61 +72,61 @@
             <!-- Filter & Action Controls -->
             <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
                 <!-- Status Legend -->
-                <div class="flex flex-wrap gap-2 text-xs font-medium">
-                    <span class="px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center gap-2">
-                        <span class="w-2 h-2 rounded-full bg-emerald-400"></span> Vacant
+                <div class="flex flex-wrap gap-2 text-xs">
+                    <span class="px-3 py-1.5 rounded-lg bg-neutral-900 border border-neutral-800 text-neutral-300 flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Vacant
                     </span>
-                    <span class="px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center gap-2">
-                        <span class="w-2 h-2 rounded-full bg-amber-400"></span> Occupied
+                    <span class="px-3 py-1.5 rounded-lg bg-neutral-900 border border-neutral-800 text-neutral-300 flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-amber-500"></span> Occupied
                     </span>
-                    <span class="px-3 py-1.5 rounded-lg bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 flex items-center gap-2">
-                        <span class="w-2 h-2 rounded-full bg-cyan-400"></span> Reserved
+                    <span class="px-3 py-1.5 rounded-lg bg-neutral-900 border border-neutral-800 text-neutral-300 flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-cyan-500"></span> Reserved
                     </span>
-                    <span class="px-3 py-1.5 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-400 flex items-center gap-2">
-                        <span class="w-2 h-2 rounded-full bg-rose-400"></span> Billing
+                    <span class="px-3 py-1.5 rounded-lg bg-neutral-900 border border-neutral-800 text-neutral-300 flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-rose-500"></span> Billing
                     </span>
                 </div>
 
                 <!-- Actions -->
                 <div class="flex gap-2">
-                    <button onclick="openAddItemModal()" class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-2 transition">
-                        <i class="fa-solid fa-plus text-amber-400"></i> Manage Items
+                    <button onclick="openAddItemModal()" class="px-3.5 py-2 rounded-xl bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-200 text-xs font-medium flex items-center gap-2 transition">
+                        <i class="fa-solid fa-plus text-neutral-400"></i> New Item
                     </button>
-                    <button id="download-report-btn" class="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold flex items-center gap-2 transition shadow-lg shadow-blue-600/20">
-                        <i class="fa-solid fa-file-excel"></i> Sales Report
+                    <button id="download-report-btn" class="px-3.5 py-2 rounded-xl bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-200 text-xs font-medium flex items-center gap-2 transition">
+                        <i class="fa-solid fa-download text-neutral-400"></i> Export Sales
                     </button>
                 </div>
             </div>
 
             <!-- Table Grid -->
-            <div id="table-grid-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                <!-- Injected via JS -->
+            <div id="table-grid-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3.5">
+                <!-- Injected via JavaScript -->
             </div>
         </div>
 
         <!-- =========== Menu & KOT View =========== -->
         <div id="menuView" class="view">
             <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
-                <button onclick="switchView('tableView')" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold flex items-center gap-2 transition">
-                    <i class="fa-solid fa-arrow-left"></i> Back to Floor Plan
+                <button onclick="switchView('tableView')" class="px-3.5 py-2 rounded-xl bg-neutral-900 hover:bg-neutral-800 text-neutral-300 border border-neutral-800 text-xs font-medium flex items-center gap-2 transition">
+                    <i class="fa-solid fa-arrow-left"></i> Floor Plan
                 </button>
-                <div id="table-session-meta" class="text-xs text-slate-400 flex items-center gap-3">
+                <div id="table-session-meta" class="text-xs text-neutral-400 flex items-center gap-3 font-mono">
                     <!-- Session meta injected dynamically -->
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 <!-- Categories Sidebar -->
                 <aside class="lg:col-span-3">
-                    <div class="glass-panel p-4 rounded-2xl sticky top-6 border border-slate-800">
-                        <div class="flex justify-between items-center mb-3 pb-2 border-b border-slate-800">
-                            <h2 class="text-sm font-bold text-amber-400 uppercase tracking-wider">Categories</h2>
-                            <button onclick="openAddItemModal()" class="text-xs text-slate-400 hover:text-amber-400 transition" title="Add New Item">
-                                <i class="fa-solid fa-circle-plus"></i>
+                    <div class="pos-panel p-4 rounded-2xl sticky top-6 border border-neutral-800/80">
+                        <div class="flex justify-between items-center mb-3 pb-2 border-b border-neutral-800/60">
+                            <h2 class="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Categories</h2>
+                            <button onclick="openAddItemModal()" class="text-xs text-neutral-500 hover:text-neutral-300 transition" title="Add Item">
+                                <i class="fa-solid fa-plus"></i>
                             </button>
                         </div>
-                        <nav id="category-nav" class="space-y-1.5 max-h-[70vh] overflow-y-auto pr-1">
-                            <!-- Injected via JS -->
+                        <nav id="category-nav" class="space-y-1 max-h-[70vh] overflow-y-auto pr-1">
+                            <!-- Injected via JavaScript -->
                         </nav>
                     </div>
                 </aside>
@@ -138,45 +134,45 @@
                 <!-- Menu Items List -->
                 <main class="lg:col-span-5">
                     <div id="menu-items-container">
-                        <!-- Injected via JS -->
+                        <!-- Injected via JavaScript -->
                     </div>
                 </main>
 
                 <!-- KOT / Order Grid -->
                 <div class="lg:col-span-4">
-                    <div class="glass-panel p-5 rounded-2xl sticky top-6 border border-slate-800 shadow-2xl">
-                        <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+                    <div class="pos-panel p-5 rounded-2xl sticky top-6 border border-neutral-800/80">
+                        <div class="flex items-center justify-between border-b border-neutral-800/60 pb-3 mb-4">
                             <div>
-                                <h2 id="kot-header" class="text-lg font-bold text-amber-400">Order for Table</h2>
-                                <span id="kot-timer" class="text-xs font-mono text-slate-400 flex items-center gap-1 mt-0.5">
-                                    <i class="fa-regular fa-clock"></i> <span>00m 00s</span>
+                                <h2 id="kot-header" class="text-base font-semibold text-white">Order Summary</h2>
+                                <span id="kot-timer" class="text-xs font-mono text-neutral-400 flex items-center gap-1.5 mt-0.5">
+                                    <i class="fa-regular fa-clock text-[10px]"></i> <span>00m 00s</span>
                                 </span>
                             </div>
                             <div id="table-quick-status"></div>
                         </div>
 
                         <!-- KOT Items -->
-                        <div id="kot-items" class="space-y-2 mb-4 min-h-[220px] max-h-[42vh] overflow-y-auto pr-1 text-sm">
-                            <!-- Injected via JS -->
+                        <div id="kot-items" class="space-y-2 mb-4 min-h-[200px] max-h-[42vh] overflow-y-auto pr-1 text-sm">
+                            <!-- Injected via JavaScript -->
                         </div>
 
                         <!-- Totals & Actions -->
-                        <div class="border-t border-slate-800 pt-4 space-y-3">
-                            <div class="flex justify-between items-center text-sm font-medium text-slate-400">
+                        <div class="border-t border-neutral-800/60 pt-4 space-y-3">
+                            <div class="flex justify-between items-center text-sm font-medium text-neutral-400">
                                 <span>Subtotal</span>
-                                <span id="kot-total-price" class="text-white font-bold font-mono text-base">₹0.00</span>
+                                <span id="kot-total-price" class="text-white font-semibold font-mono text-base">₹0.00</span>
                             </div>
                             
                             <div class="grid grid-cols-2 gap-2">
-                                <button onclick="saveKOT()" class="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold border border-slate-700 flex items-center justify-center gap-1.5 transition">
-                                    <i class="fa-solid fa-bell-concierge text-blue-400"></i> Send KOT
+                                <button onclick="saveKOT()" class="py-2.5 px-3 rounded-xl bg-neutral-900 hover:bg-neutral-800 text-neutral-200 text-xs font-medium border border-neutral-800 transition">
+                                    Send KOT
                                 </button>
-                                <button onclick="toggleTableReservation(restaurantState.selectedTableId)" class="py-2.5 px-3 rounded-xl bg-cyan-950/60 hover:bg-cyan-900/60 text-cyan-300 border border-cyan-800/60 text-xs font-bold flex items-center justify-center gap-1.5 transition">
-                                    <i class="fa-solid fa-bookmark"></i> Toggle Reserve
+                                <button onclick="toggleTableReservation(restaurantState.selectedTableId)" class="py-2.5 px-3 rounded-xl bg-neutral-900 hover:bg-neutral-800 text-neutral-300 border border-neutral-800 text-xs font-medium transition">
+                                    Toggle Reserve
                                 </button>
                             </div>
 
-                            <button onclick="showBillingView()" class="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:brightness-110 text-slate-950 font-extrabold text-sm tracking-wide transition shadow-lg shadow-emerald-600/20">
+                            <button onclick="showBillingView()" class="w-full py-3 rounded-xl bg-amber-400 hover:bg-amber-300 text-neutral-950 font-semibold text-sm transition">
                                 Generate Bill
                             </button>
                         </div>
@@ -188,41 +184,41 @@
     </div>
 
     <!-- =========== Add New Menu Item Modal =========== -->
-    <div id="itemModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm hidden">
-        <div class="glass-card w-full max-w-md p-6 rounded-2xl border border-slate-800 shadow-2xl relative animate-fade-in">
-            <div class="flex justify-between items-center mb-4 pb-2 border-b border-slate-800">
-                <h3 class="text-lg font-bold text-white">Add New Menu Item</h3>
-                <button onclick="closeAddItemModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+    <div id="itemModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-950/80 backdrop-blur-sm hidden">
+        <div class="pos-panel w-full max-w-sm p-6 rounded-2xl border border-neutral-800 shadow-2xl">
+            <div class="flex justify-between items-center mb-4 pb-2 border-b border-neutral-800">
+                <h3 class="text-sm font-semibold text-white">Add New Dish</h3>
+                <button onclick="closeAddItemModal()" class="text-neutral-500 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <form id="addItemForm" class="space-y-3">
                 <div>
-                    <label class="block text-xs uppercase font-semibold text-slate-400 mb-1">Category</label>
-                    <select id="newItemCategory" class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white text-sm focus:border-amber-400 outline-none" required></select>
+                    <label class="block text-xs uppercase font-medium text-neutral-400 mb-1">Category</label>
+                    <select id="newItemCategory" class="w-full px-3 py-2 rounded-xl bg-neutral-900 border border-neutral-800 text-white text-sm focus:border-amber-400 outline-none" required></select>
                 </div>
                 <div>
-                    <label class="block text-xs uppercase font-semibold text-slate-400 mb-1">Item Name</label>
-                    <input type="text" id="newItemName" class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white text-sm focus:border-amber-400 outline-none" placeholder="e.g. Masala Garlic Bread" required>
+                    <label class="block text-xs uppercase font-medium text-neutral-400 mb-1">Dish Name</label>
+                    <input type="text" id="newItemName" class="w-full px-3 py-2 rounded-xl bg-neutral-900 border border-neutral-800 text-white text-sm focus:border-amber-400 outline-none" placeholder="e.g. Masala Garlic Bread" required>
                 </div>
                 <div>
-                    <label class="block text-xs uppercase font-semibold text-slate-400 mb-1">Price (₹)</label>
-                    <input type="number" id="newItemPrice" min="1" step="1" class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white text-sm focus:border-amber-400 outline-none" placeholder="249" required>
+                    <label class="block text-xs uppercase font-medium text-neutral-400 mb-1">Price (₹)</label>
+                    <input type="number" id="newItemPrice" min="1" step="1" class="w-full px-3 py-2 rounded-xl bg-neutral-900 border border-neutral-800 text-white text-sm focus:border-amber-400 outline-none" placeholder="249" required>
                 </div>
-                <div class="pt-2 flex gap-3">
-                    <button type="button" onclick="closeAddItemModal()" class="w-1/2 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition">Cancel</button>
-                    <button type="submit" class="w-1/2 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold transition">Save Item</button>
+                <div class="pt-2 flex gap-2">
+                    <button type="button" onclick="closeAddItemModal()" class="w-1/2 py-2 rounded-xl bg-neutral-900 hover:bg-neutral-800 text-neutral-400 text-xs font-medium transition">Cancel</button>
+                    <button type="submit" class="w-1/2 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-neutral-950 text-xs font-semibold transition">Save Item</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- =========== Billing Modal (Thermal Receipt Style) =========== -->
-    <div id="billingView" class="view fixed inset-0 z-50 items-center justify-center p-4 bg-black/85 backdrop-blur-md">
-        <div class="receipt-container shadow-2xl animate-fade-in mx-auto">
+    <!-- =========== Billing Modal (Thermal Receipt) =========== -->
+    <div id="billingView" class="view fixed inset-0 z-50 items-center justify-center p-4 bg-neutral-950/80 backdrop-blur-md">
+        <div class="receipt-container shadow-2xl mx-auto">
             <div class="receipt-header">
-                <h2>THE BOARDGAME CAFE</h2>
+                <h2>THE BOARD GAME CAFE</h2>
                 <p>4th Floor, Tirumala Estate, Himayathnagar</p>
                 <p>Hyderabad - 500029 | Ph: 7386425266</p>
-                <p class="text-[10px] mt-1">GSTIN: ABCDE12345FGHIJ | FSSAI: 12345678901234</p>
+                <p class="text-[10px] mt-1 text-neutral-500">GST: ABCDE12345FGHIJ | FSSAI: 12345678901234</p>
             </div>
 
             <div class="receipt-divider"></div>
@@ -230,21 +226,21 @@
             <table class="receipt-table w-full">
                 <thead>
                     <tr>
-                        <th colspan="2" id="bill-cashier-name">Cashier: Mithil</th>
+                        <th colspan="2">Terminal: 01</th>
                         <th colspan="2" class="text-right" id="bill-table-number">Table: 1</th>
                     </tr>
                     <tr>
-                        <th colspan="4" class="text-[10px] text-slate-500 font-normal pb-1" id="bill-duration-text">Runtime: 0m</th>
+                        <th colspan="4" class="text-[10px] text-neutral-500 font-normal pb-1" id="bill-duration-text">Runtime: 0m</th>
                     </tr>
-                    <tr class="border-t border-b border-dashed border-gray-400">
+                    <tr class="border-t border-b border-dashed border-neutral-300">
                         <th>Item</th>
                         <th class="text-right">Qty</th>
-                        <th class="text-right">Rate</th>
-                        <th class="text-right">Amt</th>
+                        <th class="text-right">Price</th>
+                        <th class="text-right">Total</th>
                     </tr>
                 </thead>
                 <tbody id="billing-items-tbody">
-                    <!-- Injected via JS -->
+                    <!-- Injected via JavaScript -->
                 </tbody>
             </table>
 
@@ -254,33 +250,33 @@
                 <tbody>
                     <tr><td>Subtotal:</td><td class="text-right font-mono" id="bill-subtotal">₹0.00</td></tr>
                     <tr><td>GST (5%):</td><td class="text-right font-mono" id="bill-gst">₹0.00</td></tr>
-                    <tr class="font-bold text-base border-t border-dashed border-gray-600">
+                    <tr class="font-bold text-sm border-t border-dashed border-neutral-400">
                         <td>Grand Total:</td>
-                        <td class="text-right font-mono text-black font-extrabold" id="bill-grandtotal">₹0.00</td>
+                        <td class="text-right font-mono text-neutral-900 font-bold" id="bill-grandtotal">₹0.00</td>
                     </tr>
                 </tbody>
             </table>
 
             <div class="mt-4">
-                <label for="payment-mode" class="block mb-1 text-[11px] font-bold text-gray-700 uppercase tracking-wider">Payment Mode</label>
-                <select id="payment-mode" class="bg-white border border-gray-400 text-gray-900 text-xs rounded-lg block w-full p-2 font-mono outline-none">
+                <label for="payment-mode" class="block mb-1 text-[11px] font-semibold text-neutral-700 uppercase tracking-wider">Payment Mode</label>
+                <select id="payment-mode" class="bg-white border border-neutral-300 text-neutral-900 text-xs rounded-lg block w-full p-2 font-mono outline-none">
                     <option value="UPI">UPI / QR Code</option>
                     <option value="Cash">Cash</option>
-                    <option value="Card">Credit / Debit Card</option>
+                    <option value="Card">Card</option>
                 </select>
             </div>
 
             <div class="receipt-footer mt-4">
-                <p>🎲 Thank you for rolling the dice with us! 🎲</p>
-                <p>Please Visit Again!</p>
+                <p>Thank you for visiting!</p>
+                <p>Please come again</p>
             </div>
 
             <div class="mt-5 flex gap-2">
-                <button onclick="switchView('menuView')" class="w-1/2 py-2 rounded-lg bg-gray-300 hover:bg-gray-400 text-gray-800 text-xs font-bold transition">
+                <button onclick="switchView('menuView')" class="w-1/2 py-2 rounded-lg bg-neutral-200 hover:bg-neutral-300 text-neutral-800 text-xs font-medium transition">
                     Modify
                 </button>
-                <button onclick="settleBill()" class="w-1/2 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition shadow-md">
-                    Complete Settlement
+                <button onclick="settleBill()" class="w-1/2 py-2 rounded-lg bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-semibold transition">
+                    Settle Bill
                 </button>
             </div>
         </div>
