@@ -618,19 +618,28 @@ window.handleLogout = function () {
     showAuth();
 };
 
-// --- INTRO ---
+// --- INTRO (about 7 seconds, synced with the 3D scene) ---
 function runIntro(done) {
-    const intro = document.getElementById('intro'), title = document.getElementById('intro-title');
+    const intro = document.getElementById('intro'), title = document.getElementById('intro-title'),
+          status = document.getElementById('intro-status'), pct = document.getElementById('intro-pct');
     title.innerHTML = [...'The Board Game Cafe'].map((ch, i) =>
-        `<span style="animation-delay:${(0.25 + i * 0.07).toFixed(2)}s">${ch === ' ' ? '&nbsp;' : ch}</span>`).join('');
-    let ended = false;
+        `<span style="animation-delay:${(0.7 + i * 0.09).toFixed(2)}s">${ch === ' ' ? '&nbsp;' : ch}</span>`).join('');
+    const msgs = ['Warming up the kitchen', 'Charging the controllers', 'Setting the tables', 'Opening the doors'];
+    let n = 0, ended = false; const t0 = Date.now(), DUR = 6800;
+    if (window.BG3D) BG3D.startIntro(DUR);
+    const tick = setInterval(() => {
+        const p = Math.min(1, (Date.now() - t0) / DUR);
+        pct.textContent = Math.round(p * 100) + '%';
+        const k = Math.min(msgs.length - 1, Math.floor(p * msgs.length));
+        if (k !== n || !status.textContent) { n = k; status.textContent = msgs[k]; }
+    }, 120);
     const end = () => {
-        if (ended) return; ended = true;
+        if (ended) return; ended = true; clearInterval(tick);
         intro.classList.add('out');
-        setTimeout(() => { intro.style.display = 'none'; done(); }, 700);
+        setTimeout(() => { intro.style.display = 'none'; done(); }, 900);
     };
     intro.addEventListener('click', end);
-    setTimeout(end, 3600);
+    setTimeout(end, DUR + 300);
 }
 
 // --- TOAST ---
@@ -640,7 +649,6 @@ window.toast = function (msg) {
     clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('show'), 2800);
 };
 
-window.setZone = function (id) { window.restaurantState.activeZone = id; renderTables(); };
 
 // --- BILLING: Mark as paid (red) -> Settle & clear (free/white) ---
 window.settleBill = function () {
@@ -671,63 +679,17 @@ window.settleBill = function () {
     isSettlingBill = false;
 };
 
-// --- TABLE FLOOR ---
-function makeCard(table) {
-    const b = STATUS[table.status] || STATUS.available;
-    const card = document.createElement('div');
-    card.className = `table-card ${table.status}`;
-    card.innerHTML = `
-        <div class="flex justify-between items-start">
-            <span class="text-xl font-bold font-mono tracking-tight text-white">${table.short}</span>
-            <span class="text-[10px] font-medium uppercase tracking-wider ${b.text} flex items-center gap-1.5">
-                <span class="w-1.5 h-1.5 rounded-full ${b.dot}"></span>${b.label}
-            </span>
-        </div>
-        <div class="space-y-0.5">
-            <div class="text-[11px] font-mono text-neutral-400">
-                <span data-table-timer="${table.id}">${table.sessionStart && table.status !== 'available' ? formatDuration(table.sessionStart) : '--:--'}</span>
-            </div>
-            <div class="text-xs font-semibold text-neutral-200 truncate">${table.order.length > 0 ? `₹${table.total.toFixed(0)} (${table.order.length})` : 'Empty'}</div>
-        </div>
-        <div class="pt-2 border-t border-neutral-700/60 flex justify-between items-center text-xs">
-            <button onclick="event.stopPropagation(); toggleTableReservation('${table.id}')" class="text-neutral-400 hover:text-emerald-400 transition cursor-pointer" title="Toggle booking">
-                <i class="fa-solid fa-bookmark text-[11px]"></i>
-            </button>
-            <span class="text-[11px] font-medium text-neutral-400">${table.status === 'paid' ? 'Settle' : 'Open'} &rarr;</span>
-        </div>`;
-    card.onclick = () => {
-        const s = window.restaurantState;
-        s.selectedTableId = table.id;
-        if (table.status === 'paid') { renderBill(); window.switchView('billingView'); return; }
-        if (table.status === 'available') { table.status = 'occupied'; table.sessionStart = Date.now(); }
-        renderKOT();
-        window.switchView('menuView');
-    };
-    return card;
-}
-
-function renderTables() {
-    const box = document.getElementById('table-grid-container');
-    if (!box) return;
-    const s = window.restaurantState, zone = ZONES.find(z => z.id === s.activeZone) || ZONES[0];
-
-    document.getElementById('zone-tabs').innerHTML = ZONES.map(z => {
-        const busy = s.tables.filter(t => t.zone === z.id && t.status !== 'available').length;
-        return `<button onclick="setZone('${z.id}')" class="zone-tab ${z.id === zone.id ? 'active' : ''}">
-            <i class="fa-solid ${z.icon}"></i> ${z.name}${busy ? `<span class="zone-count">${busy}</span>` : ''}</button>`;
-    }).join('');
-
-    box.innerHTML = '';
-    zone.groups.forEach(g => {
-        if (g.label) {
-            const h = document.createElement('h3');
-            h.className = 'col-span-full text-sm font-semibold text-neutral-300 mt-2';
-            h.textContent = g.label;
-            box.appendChild(h);
-        }
-        s.tables.filter(t => t.zone === zone.id && t.group === g.label).forEach(t => box.appendChild(makeCard(t)));
-    });
-}
+// --- TABLE FLOOR (drawn by React in floor.js) ---
+window.openTable = function (id) {
+    const st = window.restaurantState, table = getTable(id);
+    if (!table) return;
+    st.selectedTableId = id;
+    if (table.status === 'paid') { renderBill(); window.switchView('billingView'); return; }
+    if (table.status === 'available') { table.status = 'occupied'; table.sessionStart = Date.now(); }
+    renderKOT();
+    window.switchView('menuView');
+};
+function renderTables() { window.dispatchEvent(new Event('floor:update')); }
 
 // keep original renderBill, then sync the billing buttons to the table's state
 const _renderBill = renderBill;

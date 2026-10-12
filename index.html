@@ -30,9 +30,11 @@
 
     <!-- =========== Intro =========== -->
     <div id="intro" class="fixed inset-0 z-[60] flex flex-col items-center justify-center text-center px-4">
-        <i class="fa-solid fa-gamepad intro-pad"></i>
-        <h1 id="intro-title" class="intro-title mt-3" aria-label="The Board Game Cafe"></h1>
+        <p class="intro-cap">Himayathnagar, Hyderabad</p>
+        <h1 id="intro-title" class="intro-title" aria-label="The Board Game Cafe"></h1>
+        <div class="intro-rule"></div>
         <p class="intro-sub">Play. Eat. Repeat.</p>
+        <div class="intro-load"><span id="intro-status"></span><span id="intro-pct">0%</span></div>
         <div class="intro-bar"><i></i></div>
         <p class="intro-skip">Tap anywhere to skip</p>
     </div>
@@ -110,10 +112,7 @@
                 </div>
             </div>
 
-            <div id="zone-tabs" class="flex flex-wrap gap-2 mb-5"></div>
-            <div id="table-grid-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3.5">
-                <!-- Dynamic tables -->
-            </div>
+            <div id="floor-root"></div>
         </div>
 
         <!-- =========== Menu & KOT View =========== -->
@@ -294,7 +293,11 @@
         </div>
     </div>
 
-    <script src="background.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="bg3d.js"></script>
     <script src="script.js"></script>
+    <script src="floor.js"></script>
 </body>
 </html>
