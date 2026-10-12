@@ -7,50 +7,69 @@
 
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // Cozy espresso palette: remaps every neutral-* and amber-* class used in the app
+        tailwind.config = { theme: { extend: { colors: {
+            neutral: { 50:'#fbf5ea',100:'#f3e6d3',200:'#e6d3b8',300:'#d3bb9b',400:'#b99d7e',500:'#8f7560',600:'#6a5446',700:'#4a3a31',800:'#3a2d26',900:'#2a201b',950:'#1c1411' },
+            amber:   { 300:'#f4c680',400:'#e8a54b',500:'#d78c2f',950:'#3a240d' }
+        } } } };
+    </script>
 
     <!-- Font Awesome CDN -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
     <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 
     <!-- Custom Stylesheet -->
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="bg-neutral-950 text-neutral-100 min-h-screen antialiased selection:bg-amber-400 selection:text-neutral-950">
 
-    <!-- =========== Authentication Overlay =========== -->
-    <div id="authModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-950/90 backdrop-blur-md">
-        <div class="pos-panel w-full max-w-sm p-8 rounded-2xl border border-neutral-800 shadow-2xl text-center">
+    <canvas id="bgCanvas" aria-hidden="true"></canvas>
+
+    <!-- =========== Intro =========== -->
+    <div id="intro" class="fixed inset-0 z-[60] flex flex-col items-center justify-center text-center px-4">
+        <i class="fa-solid fa-gamepad intro-pad"></i>
+        <h1 id="intro-title" class="intro-title mt-3" aria-label="The Board Game Cafe"></h1>
+        <p class="intro-sub">Play. Eat. Repeat.</p>
+        <div class="intro-bar"><i></i></div>
+        <p class="intro-skip">Tap anywhere to skip</p>
+    </div>
+
+    <!-- =========== Login =========== -->
+    <div id="authModal" style="display:none" class="fixed inset-0 z-50 items-center justify-center p-4 bg-neutral-950/40">
+        <div id="authCard" class="pos-panel w-full max-w-sm p-8 rounded-2xl border border-neutral-800 shadow-2xl text-center">
             <div class="w-14 h-14 rounded-xl bg-neutral-900 border border-neutral-800 text-amber-400 mx-auto flex items-center justify-center text-xl mb-4">
                 <i class="fa-solid fa-lock"></i>
             </div>
-            <h2 class="text-xl font-semibold text-white tracking-tight">Security Access</h2>
-            <p class="text-neutral-400 text-xs mt-1">Enter your terminal passkey</p>
-            
+            <h2 class="text-xl font-semibold text-white tracking-tight">Staff login</h2>
+            <p class="text-neutral-400 text-xs mt-1">Enter the 4-digit passcode to open the terminal</p>
             <div class="mt-6 space-y-4 text-left">
                 <div>
-                    <input type="password" id="authPin" maxlength="4" autofocus
-                        class="w-full px-4 py-3 rounded-xl bg-neutral-900 border border-neutral-800 text-white placeholder-neutral-600 focus:outline-none focus:border-amber-400/80 focus:ring-1 focus:ring-amber-400/80 transition tracking-[0.6em] text-center font-mono text-xl" 
+                    <input type="password" id="authPin" maxlength="4" inputmode="numeric" autocomplete="off"
+                        class="w-full px-4 py-3 rounded-xl bg-neutral-900 border border-neutral-800 text-white placeholder-neutral-600 focus:outline-none focus:border-amber-400/80 focus:ring-1 focus:ring-amber-400/80 transition tracking-[0.6em] text-center font-mono text-xl"
                         placeholder="••••">
-                    <p id="authErrorMsg" class="text-xs text-rose-400 mt-2 text-center hidden">Incorrect security PIN</p>
+                    <p id="authErrorMsg" class="text-xs text-rose-400 mt-2 text-center hidden">Wrong passcode. Try again.</p>
                 </div>
-                <button type="button" onclick="submitLogin()" 
+                <button type="button" onclick="submitLogin()"
                     class="w-full py-3 rounded-xl bg-amber-400 hover:bg-amber-300 text-neutral-950 font-semibold text-sm transition active:scale-[0.99] cursor-pointer">
-                    Unlock Terminal
+                    Unlock terminal
                 </button>
             </div>
         </div>
     </div>
 
+    <div id="toast" role="status"></div>
+
     <!-- =========== Main POS App =========== -->
-    <div id="pos-container" class="container mx-auto p-4 md:p-8 max-w-7xl">
+    <div id="pos-container" class="locked relative z-10 container mx-auto p-4 md:p-8 max-w-7xl">
         
         <!-- Header Bar -->
         <header class="flex flex-col md:flex-row justify-between items-center pb-6 mb-8 border-b border-neutral-900 gap-4">
             <div class="text-center md:text-left">
                 <div class="flex items-center gap-3 justify-center md:justify-start">
-                    <span class="text-amber-400 text-2xl"><i class="fa-solid fa-chess-knight"></i></span>
+                    <span class="text-amber-400 text-2xl"><i class="fa-solid fa-gamepad"></i></span>
                     <h1 class="text-2xl font-bold tracking-tight text-white">The Board Game Cafe</h1>
                 </div>
                 <p class="text-xs text-neutral-400 mt-1">4th Floor, Tirumala Estate, Himayathnagar, Hyd | GST: ABCDE12345FGHIJ</p>
@@ -73,18 +92,11 @@
             <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
                 <!-- Status Legend -->
                 <div class="flex flex-wrap gap-2 text-xs">
-                    <span class="px-3 py-1.5 rounded-lg bg-neutral-900 border border-neutral-800 text-neutral-300 flex items-center gap-2">
-                        <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Vacant
-                    </span>
-                    <span class="px-3 py-1.5 rounded-lg bg-neutral-900 border border-neutral-800 text-neutral-300 flex items-center gap-2">
-                        <span class="w-2 h-2 rounded-full bg-amber-500"></span> Occupied
-                    </span>
-                    <span class="px-3 py-1.5 rounded-lg bg-neutral-900 border border-neutral-800 text-neutral-300 flex items-center gap-2">
-                        <span class="w-2 h-2 rounded-full bg-cyan-500"></span> Reserved
-                    </span>
-                    <span class="px-3 py-1.5 rounded-lg bg-neutral-900 border border-neutral-800 text-neutral-300 flex items-center gap-2">
-                        <span class="w-2 h-2 rounded-full bg-rose-500"></span> Billing
-                    </span>
+                    <span class="px-3 py-1.5 rounded-lg bg-neutral-900 border border-neutral-800 text-neutral-300 flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-white"></span> Free</span>
+                    <span class="px-3 py-1.5 rounded-lg bg-neutral-900 border border-neutral-800 text-neutral-300 flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-400"></span> Booked</span>
+                    <span class="px-3 py-1.5 rounded-lg bg-neutral-900 border border-neutral-800 text-neutral-300 flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-orange-400"></span> Running</span>
+                    <span class="px-3 py-1.5 rounded-lg bg-neutral-900 border border-neutral-800 text-neutral-300 flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-sky-400"></span> Billing</span>
+                    <span class="px-3 py-1.5 rounded-lg bg-neutral-900 border border-neutral-800 text-neutral-300 flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-red-500"></span> Paid, not settled</span>
                 </div>
 
                 <!-- Actions -->
@@ -98,8 +110,8 @@
                 </div>
             </div>
 
-            <!-- Table Grid -->
-            <div id="table-grid-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3.5">
+            <div id="zone-tabs" class="flex flex-wrap gap-2 mb-5"></div>
+            <div id="table-grid-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3.5">
                 <!-- Dynamic tables -->
             </div>
         </div>
@@ -272,16 +284,17 @@
             </div>
 
             <div class="mt-5 flex gap-2">
-                <button onclick="switchView('menuView')" class="w-1/2 py-2 rounded-lg bg-neutral-200 hover:bg-neutral-300 text-neutral-800 text-xs font-medium transition cursor-pointer">
+                <button id="bill-modify-btn" onclick="switchView('menuView')" class="flex-1 py-2 rounded-lg bg-neutral-200 hover:bg-neutral-300 text-neutral-800 text-xs font-medium transition cursor-pointer">
                     Modify
                 </button>
-                <button onclick="settleBill()" class="w-1/2 py-2 rounded-lg bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-semibold transition cursor-pointer">
-                    Settle Bill
+                <button id="bill-action-btn" onclick="settleBill()" class="flex-1 py-2 rounded-lg bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-semibold transition cursor-pointer">
+                    Mark as paid
                 </button>
             </div>
         </div>
     </div>
 
+    <script src="background.js"></script>
     <script src="script.js"></script>
 </body>
 </html>

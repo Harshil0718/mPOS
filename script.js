@@ -1,16 +1,44 @@
-// --- GLOBAL APPLICATION STATE ---
+// ============ THE BOARD GAME CAFE - mPOS ============
 window.restaurantState = {
-    tables: [],
-    salesData: [],
-    currentView: 'tableView',
-    selectedTableId: null,
-    gstRate: 0.05,
-    totalTables: 30,
-    isAuthenticated: false,
-    runtimeInterval: null
+    tables: [], salesData: [], currentView: 'tableView', selectedTableId: null,
+    gstRate: 0.05, isAuthenticated: false, runtimeInterval: null, activeZone: 'dine'
+};
+let isSettlingBill = false;
+
+// --- TABLE LAYOUT (edit counts here) ---
+const ZONES = [
+    { id: 'dine',    name: 'In-house Dine-in', short: 'Dine-in', icon: 'fa-utensils',            groups: [{ label: null, count: 20 }] },
+    { id: 'bar',     name: 'Bar Counter',      short: 'Bar',     icon: 'fa-martini-glass-citrus', groups: [{ label: null, count: 5 }] },
+    { id: 'pc',      name: 'PC Gaming',        short: 'PC',      icon: 'fa-computer',             groups: [{ label: 'Row A', key: 'A', count: 7 }, { label: 'Row B', key: 'B', count: 7 }, { label: 'Row C', key: 'C', count: 2 }] },
+    { id: 'ps',      name: 'PS Gaming',        short: 'PS',      icon: 'fa-gamepad',              groups: [{ label: null, count: 2 }] },
+    { id: 'balcony', name: 'Balcony',          short: 'Balcony', icon: 'fa-tree',                 groups: [{ label: null, count: 4 }] }
+];
+
+// --- STATUS COLOURS: free=white, booked=green, running=orange, billing=sky, paid-not-settled=red ---
+const STATUS = {
+    available: { label: 'Free',    text: 'text-white',       dot: 'bg-white',       badge: 'border bg-white/10 text-white border-white/40' },
+    reserved:  { label: 'Booked',  text: 'text-emerald-400', dot: 'bg-emerald-400', badge: 'border bg-emerald-950/60 text-emerald-400 border-emerald-700' },
+    occupied:  { label: 'Running', text: 'text-orange-400',  dot: 'bg-orange-400',  badge: 'border bg-orange-950/60 text-orange-400 border-orange-700' },
+    billing:   { label: 'Billing', text: 'text-sky-400',     dot: 'bg-sky-400',     badge: 'border bg-sky-950/60 text-sky-400 border-sky-700' },
+    paid:      { label: 'Paid',    text: 'text-red-400',     dot: 'bg-red-500',     badge: 'border bg-red-950/60 text-red-400 border-red-700' }
 };
 
-let isSettlingBill = false;
+const getTable = id => window.restaurantState.tables.find(t => t.id === id);
+
+function buildTables() {
+    const list = [];
+    ZONES.forEach(z => z.groups.forEach(g => {
+        for (let i = 1; i <= g.count; i++) {
+            const key = g.key ? g.key + i : String(i);
+            list.push({
+                id: `${z.id}-${key}`, zone: z.id, group: g.label, short: key,
+                name: g.key ? `PC ${g.label}-${i}` : `${z.short} ${i}`,
+                status: 'available', order: [], total: 0, sessionStart: null, paymentMode: null
+            });
+        }
+    }));
+    window.restaurantState.tables = list;
+}
 
 // --- MENU DATA ---
 window.menuData = {
@@ -241,43 +269,6 @@ window.menuData = {
     }
 };
 
-// --- GLOBAL METHODS (Accessible from HTML onclick) ---
-
-window.submitLogin = function() {
-    const authPin = document.getElementById('authPin');
-    const authModal = document.getElementById('authModal');
-    const authErrorMsg = document.getElementById('authErrorMsg');
-
-    const pin = authPin ? authPin.value.trim() : '';
-
-    if (pin === "0718") {
-        window.restaurantState.isAuthenticated = true;
-        sessionStorage.setItem('bgc_pos_auth', 'true');
-        if (authModal) authModal.style.display = 'none';
-        if (authErrorMsg) authErrorMsg.classList.add('hidden');
-        if (authPin) authPin.value = '';
-        renderTables();
-    } else {
-        if (authErrorMsg) authErrorMsg.classList.remove('hidden');
-        if (authPin) {
-            authPin.value = '';
-            authPin.focus();
-        }
-    }
-};
-
-window.handleLogout = function() {
-    sessionStorage.removeItem('bgc_pos_auth');
-    window.restaurantState.isAuthenticated = false;
-    const authModal = document.getElementById('authModal');
-    const authPin = document.getElementById('authPin');
-    if (authModal) authModal.style.display = 'flex';
-    if (authPin) {
-        authPin.value = '';
-        authPin.focus();
-    }
-};
-
 window.switchView = function(viewName) {
     window.restaurantState.currentView = viewName;
     const views = {
@@ -301,7 +292,7 @@ window.switchView = function(viewName) {
 };
 
 window.toggleTableReservation = function(tableId) {
-    const table = window.restaurantState.tables.find(t => t.id === Number(tableId));
+    const table = window.restaurantState.tables.find(t => t.id === tableId);
     if (!table) return;
 
     if (table.status === 'reserved') {
@@ -323,7 +314,7 @@ window.addToOrder = function(name, price) {
         alert("Please select a table first.");
         return;
     }
-    const table = window.restaurantState.tables.find(t => t.id === Number(window.restaurantState.selectedTableId));
+    const table = window.restaurantState.tables.find(t => t.id === window.restaurantState.selectedTableId);
     if (!table) return;
 
     if (table.status === 'available') {
@@ -338,7 +329,7 @@ window.addToOrder = function(name, price) {
 };
 
 window.modifyItemQty = function(name, delta) {
-    const table = window.restaurantState.tables.find(t => t.id === Number(window.restaurantState.selectedTableId));
+    const table = window.restaurantState.tables.find(t => t.id === window.restaurantState.selectedTableId);
     if (!table) return;
 
     if (delta < 0) {
@@ -358,7 +349,7 @@ window.modifyItemQty = function(name, delta) {
 };
 
 window.removeItemFromOrder = function(name) {
-    const table = window.restaurantState.tables.find(t => t.id === Number(window.restaurantState.selectedTableId));
+    const table = window.restaurantState.tables.find(t => t.id === window.restaurantState.selectedTableId);
     if (!table) return;
     table.order = table.order.filter(i => i.name !== name);
     renderKOT();
@@ -366,16 +357,16 @@ window.removeItemFromOrder = function(name) {
 
 window.saveKOT = function() {
     if (!window.restaurantState.selectedTableId) return;
-    const table = window.restaurantState.tables.find(t => t.id === Number(window.restaurantState.selectedTableId));
+    const table = window.restaurantState.tables.find(t => t.id === window.restaurantState.selectedTableId);
     if (!table || table.order.length === 0) {
         alert("No items in the order to dispatch.");
         return;
     }
-    alert(`KOT dispatched for Table ${table.id} (${table.order.length} items)`);
+    alert(`KOT dispatched for Table ${table.name} (${table.order.length} items)`);
 };
 
 window.showBillingView = function() {
-    const table = window.restaurantState.tables.find(t => t.id === Number(window.restaurantState.selectedTableId));
+    const table = window.restaurantState.tables.find(t => t.id === window.restaurantState.selectedTableId);
     if (!table || table.order.length === 0) {
         alert("Cannot generate a bill for an empty order.");
         return;
@@ -383,47 +374,6 @@ window.showBillingView = function() {
     table.status = 'billing';
     renderBill();
     window.switchView('billingView');
-};
-
-window.settleBill = function() {
-    if (isSettlingBill) return;
-    isSettlingBill = true;
-
-    const table = window.restaurantState.tables.find(t => t.id === Number(window.restaurantState.selectedTableId));
-    if (!table) {
-        isSettlingBill = false;
-        return;
-    }
-
-    const paymentMode = document.getElementById('payment-mode').value;
-    const subtotal = table.total;
-    const gst = subtotal * window.restaurantState.gstRate;
-    const grandTotal = subtotal + gst;
-    const duration = formatDuration(table.sessionStart);
-
-    const billRecord = {
-        billId: `B-${Date.now().toString().slice(-6)}`,
-        tableId: table.id,
-        date: new Date().toLocaleString(),
-        duration: duration,
-        subtotal: subtotal,
-        gst: gst,
-        grandTotal: grandTotal,
-        paymentMode: paymentMode,
-        items: [...table.order]
-    };
-    window.restaurantState.salesData.push(billRecord);
-
-    alert(`Payment of ₹${grandTotal.toFixed(2)} settled via ${paymentMode}`);
-
-    table.status = 'available';
-    table.order = [];
-    table.total = 0;
-    table.sessionStart = null;
-
-    window.restaurantState.selectedTableId = null;
-    window.switchView('tableView');
-    isSettlingBill = false;
 };
 
 window.showCategory = function(categoryId, event) {
@@ -469,67 +419,8 @@ function formatDuration(startTime) {
     return `${String(mins).padStart(2, '0')}m ${String(secs).padStart(2, '0')}s`;
 }
 
-function renderTables() {
-    const tableGridContainer = document.getElementById('table-grid-container');
-    if (!tableGridContainer) return;
-
-    tableGridContainer.innerHTML = '';
-    window.restaurantState.tables.forEach(table => {
-        const card = document.createElement('div');
-        card.className = `table-card ${table.status}`;
-
-        const badgeConfig = {
-            available: { text: 'text-emerald-400', label: 'Vacant', dot: 'bg-emerald-400' },
-            occupied: { text: 'text-amber-400', label: 'Occupied', dot: 'bg-amber-400' },
-            reserved: { text: 'text-cyan-400', label: 'Reserved', dot: 'bg-cyan-400' },
-            billing: { text: 'text-rose-400', label: 'Billing', dot: 'bg-rose-400' }
-        };
-        const currentBadge = badgeConfig[table.status] || badgeConfig.available;
-
-        card.innerHTML = `
-            <div class="flex justify-between items-start">
-                <span class="text-xl font-bold font-mono tracking-tight text-white">${table.id}</span>
-                <span class="text-[10px] font-medium uppercase tracking-wider ${currentBadge.text} flex items-center gap-1.5">
-                    <span class="w-1.5 h-1.5 rounded-full ${currentBadge.dot}"></span>
-                    ${currentBadge.label}
-                </span>
-            </div>
-
-            <div class="space-y-0.5">
-                <div class="text-[11px] font-mono text-neutral-400">
-                    <span data-table-timer="${table.id}">
-                        ${table.sessionStart && table.status !== 'available' ? formatDuration(table.sessionStart) : '--:--'}
-                    </span>
-                </div>
-                <div class="text-xs font-semibold text-neutral-200 truncate">
-                    ${table.order.length > 0 ? `₹${table.total.toFixed(0)} (${table.order.length})` : 'Empty'}
-                </div>
-            </div>
-
-            <div class="pt-2 border-t border-neutral-800/80 flex justify-between items-center text-xs">
-                <button onclick="event.stopPropagation(); toggleTableReservation(${table.id})" class="text-neutral-500 hover:text-cyan-400 transition cursor-pointer" title="Toggle Reservation">
-                    <i class="fa-solid fa-bookmark text-[11px]"></i>
-                </button>
-                <span class="text-[11px] font-medium text-neutral-400 hover:text-white transition">Select &rarr;</span>
-            </div>
-        `;
-
-        card.onclick = () => {
-            window.restaurantState.selectedTableId = table.id;
-            if (table.status === 'available') {
-                table.status = 'occupied';
-                table.sessionStart = Date.now();
-            }
-            renderKOT();
-            window.switchView('menuView');
-        };
-
-        tableGridContainer.appendChild(card);
-    });
-}
-
 function renderKOT() {
-    const table = window.restaurantState.tables.find(t => t.id === Number(window.restaurantState.selectedTableId));
+    const table = window.restaurantState.tables.find(t => t.id === window.restaurantState.selectedTableId);
     if (!table) return;
 
     const kotHeader = document.getElementById('kot-header');
@@ -538,20 +429,18 @@ function renderKOT() {
     const kotItems = document.getElementById('kot-items');
     const kotTotalPrice = document.getElementById('kot-total-price');
 
-    if (kotHeader) kotHeader.textContent = `Table ${table.id}`;
+    if (kotHeader) kotHeader.textContent = `Table ${table.name}`;
     if (tableQuickStatus) {
         tableQuickStatus.innerHTML = `
-            <span class="px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wider ${
-                table.status === 'reserved' ? 'bg-cyan-950/60 text-cyan-400 border border-cyan-800' : 'bg-amber-950/60 text-amber-400 border border-amber-800'
-            }">
-                ${table.status}
+            <span class="px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wider ${STATUS[table.status].badge}">
+                ${STATUS[table.status].label}
             </span>
         `;
     }
 
     if (tableSessionMeta) {
         tableSessionMeta.innerHTML = `
-            <span>Table: <strong>${table.id}</strong></span>
+            <span>Table: <strong>${table.name}</strong></span>
             <span>&bull;</span>
             <span>Started: ${table.sessionStart ? new Date(table.sessionStart).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Now'}</span>
         `;
@@ -603,7 +492,7 @@ function renderKOT() {
 }
 
 function renderBill() {
-    const table = window.restaurantState.tables.find(t => t.id === Number(window.restaurantState.selectedTableId));
+    const table = window.restaurantState.tables.find(t => t.id === window.restaurantState.selectedTableId);
     if (!table) return;
 
     const subtotal = table.total;
@@ -633,7 +522,7 @@ function renderBill() {
             </tr>`).join('');
     }
 
-    if (billTableNumber) billTableNumber.textContent = `Table: ${table.id}`;
+    if (billTableNumber) billTableNumber.textContent = `Table: ${table.name}`;
     if (billDurationText) billDurationText.textContent = `Session: ${formatDuration(table.sessionStart)}`;
     if (billSubtotal) billSubtotal.textContent = `₹${subtotal.toFixed(2)}`;
     if (billGst) billGst.textContent = `₹${gst.toFixed(2)}`;
@@ -697,51 +586,175 @@ function injectFullMenu() {
     if (firstCategory) window.showCategory(firstCategory, null);
 }
 
-// --- BOOTSTRAPPER ---
-document.addEventListener('DOMContentLoaded', () => {
-    // 1. Initialize tables
-    window.restaurantState.tables = [];
-    for (let i = 1; i <= window.restaurantState.totalTables; i++) {
-        window.restaurantState.tables.push({
-            id: i,
-            status: 'available',
-            order: [],
-            total: 0,
-            sessionStart: null
-        });
-    }
 
-    // 2. Auth check
-    const authModal = document.getElementById('authModal');
-    const authPin = document.getElementById('authPin');
-    const savedAuth = sessionStorage.getItem('bgc_pos_auth');
-
-    if (savedAuth === 'true') {
-        window.restaurantState.isAuthenticated = true;
-        if (authModal) authModal.style.display = 'none';
+// --- LOGIN / LOGOUT ---
+function showAuth() {
+    const m = document.getElementById('authModal'), p = document.getElementById('authPin');
+    if (m) m.style.display = 'flex';
+    if (p) { p.value = ''; p.focus(); }
+}
+function unlock() {
+    window.restaurantState.isAuthenticated = true;
+    sessionStorage.setItem('bgc_pos_auth', 'true');
+    document.getElementById('authModal').style.display = 'none';
+    document.getElementById('pos-container').classList.remove('locked');
+    renderTables();
+}
+window.submitLogin = function () {
+    const pin = document.getElementById('authPin'), err = document.getElementById('authErrorMsg');
+    if (pin.value.trim() === '0718') {
+        err.classList.add('hidden'); pin.value = ''; unlock();
     } else {
-        window.restaurantState.isAuthenticated = false;
-        if (authModal) authModal.style.display = 'flex';
-        if (authPin) authPin.focus();
+        err.classList.remove('hidden'); pin.value = '';
+        const card = document.getElementById('authCard');
+        card.classList.remove('shake'); void card.offsetWidth; card.classList.add('shake');
+        pin.focus();
+    }
+};
+window.handleLogout = function () {
+    sessionStorage.removeItem('bgc_pos_auth');
+    window.restaurantState.isAuthenticated = false;
+    document.getElementById('pos-container').classList.add('locked');
+    showAuth();
+};
+
+// --- INTRO ---
+function runIntro(done) {
+    const intro = document.getElementById('intro'), title = document.getElementById('intro-title');
+    title.innerHTML = [...'The Board Game Cafe'].map((ch, i) =>
+        `<span style="animation-delay:${(0.25 + i * 0.07).toFixed(2)}s">${ch === ' ' ? '&nbsp;' : ch}</span>`).join('');
+    let ended = false;
+    const end = () => {
+        if (ended) return; ended = true;
+        intro.classList.add('out');
+        setTimeout(() => { intro.style.display = 'none'; done(); }, 700);
+    };
+    intro.addEventListener('click', end);
+    setTimeout(end, 3600);
+}
+
+// --- TOAST ---
+window.toast = function (msg) {
+    const el = document.getElementById('toast');
+    el.textContent = msg; el.classList.add('show');
+    clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('show'), 2800);
+};
+
+window.setZone = function (id) { window.restaurantState.activeZone = id; renderTables(); };
+
+// --- BILLING: Mark as paid (red) -> Settle & clear (free/white) ---
+window.settleBill = function () {
+    if (isSettlingBill) return;
+    const s = window.restaurantState, table = getTable(s.selectedTableId);
+    if (!table) return;
+
+    if (table.status !== 'paid') {
+        table.paymentMode = document.getElementById('payment-mode').value;
+        table.status = 'paid';
+        toast(`${table.name}: paid via ${table.paymentMode}. Settle it to clear the table.`);
+        s.selectedTableId = null;
+        window.switchView('tableView');
+        return;
     }
 
-    // 3. Enter key trigger on PIN input
-    authPin?.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            window.submitLogin();
-        }
+    isSettlingBill = true;
+    const subtotal = table.total, gst = subtotal * s.gstRate, grandTotal = subtotal + gst;
+    s.salesData.push({
+        billId: `B-${Date.now().toString().slice(-6)}`, tableId: table.name,
+        date: new Date().toLocaleString(), duration: formatDuration(table.sessionStart),
+        subtotal, gst, grandTotal, paymentMode: table.paymentMode || 'Cash', items: [...table.order]
     });
+    toast(`${table.name} settled: ₹${grandTotal.toFixed(2)} via ${table.paymentMode}`);
+    Object.assign(table, { status: 'available', order: [], total: 0, sessionStart: null, paymentMode: null });
+    s.selectedTableId = null;
+    window.switchView('tableView');
+    isSettlingBill = false;
+};
 
-    // 4. Render components
+// --- TABLE FLOOR ---
+function makeCard(table) {
+    const b = STATUS[table.status] || STATUS.available;
+    const card = document.createElement('div');
+    card.className = `table-card ${table.status}`;
+    card.innerHTML = `
+        <div class="flex justify-between items-start">
+            <span class="text-xl font-bold font-mono tracking-tight text-white">${table.short}</span>
+            <span class="text-[10px] font-medium uppercase tracking-wider ${b.text} flex items-center gap-1.5">
+                <span class="w-1.5 h-1.5 rounded-full ${b.dot}"></span>${b.label}
+            </span>
+        </div>
+        <div class="space-y-0.5">
+            <div class="text-[11px] font-mono text-neutral-400">
+                <span data-table-timer="${table.id}">${table.sessionStart && table.status !== 'available' ? formatDuration(table.sessionStart) : '--:--'}</span>
+            </div>
+            <div class="text-xs font-semibold text-neutral-200 truncate">${table.order.length > 0 ? `₹${table.total.toFixed(0)} (${table.order.length})` : 'Empty'}</div>
+        </div>
+        <div class="pt-2 border-t border-neutral-700/60 flex justify-between items-center text-xs">
+            <button onclick="event.stopPropagation(); toggleTableReservation('${table.id}')" class="text-neutral-400 hover:text-emerald-400 transition cursor-pointer" title="Toggle booking">
+                <i class="fa-solid fa-bookmark text-[11px]"></i>
+            </button>
+            <span class="text-[11px] font-medium text-neutral-400">${table.status === 'paid' ? 'Settle' : 'Open'} &rarr;</span>
+        </div>`;
+    card.onclick = () => {
+        const s = window.restaurantState;
+        s.selectedTableId = table.id;
+        if (table.status === 'paid') { renderBill(); window.switchView('billingView'); return; }
+        if (table.status === 'available') { table.status = 'occupied'; table.sessionStart = Date.now(); }
+        renderKOT();
+        window.switchView('menuView');
+    };
+    return card;
+}
+
+function renderTables() {
+    const box = document.getElementById('table-grid-container');
+    if (!box) return;
+    const s = window.restaurantState, zone = ZONES.find(z => z.id === s.activeZone) || ZONES[0];
+
+    document.getElementById('zone-tabs').innerHTML = ZONES.map(z => {
+        const busy = s.tables.filter(t => t.zone === z.id && t.status !== 'available').length;
+        return `<button onclick="setZone('${z.id}')" class="zone-tab ${z.id === zone.id ? 'active' : ''}">
+            <i class="fa-solid ${z.icon}"></i> ${z.name}${busy ? `<span class="zone-count">${busy}</span>` : ''}</button>`;
+    }).join('');
+
+    box.innerHTML = '';
+    zone.groups.forEach(g => {
+        if (g.label) {
+            const h = document.createElement('h3');
+            h.className = 'col-span-full text-sm font-semibold text-neutral-300 mt-2';
+            h.textContent = g.label;
+            box.appendChild(h);
+        }
+        s.tables.filter(t => t.zone === zone.id && t.group === g.label).forEach(t => box.appendChild(makeCard(t)));
+    });
+}
+
+// keep original renderBill, then sync the billing buttons to the table's state
+const _renderBill = renderBill;
+renderBill = function () {
+    _renderBill();
+    const t = getTable(window.restaurantState.selectedTableId), paid = !!t && t.status === 'paid';
+    const a = document.getElementById('bill-action-btn'), m = document.getElementById('bill-modify-btn'), p = document.getElementById('payment-mode');
+    if (a) a.textContent = paid ? 'Settle & clear table' : 'Mark as paid';
+    if (m) { m.textContent = paid ? 'Back to floor' : 'Modify'; m.onclick = () => window.switchView(paid ? 'tableView' : 'menuView'); }
+    if (p) { p.disabled = paid; if (paid && t.paymentMode) p.value = t.paymentMode; }
+};
+
+// --- BOOTSTRAP ---
+document.addEventListener('DOMContentLoaded', () => {
+    buildTables();
+    const authPin = document.getElementById('authPin');
+    authPin?.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); window.submitLogin(); } });
+
     renderTables();
     injectFullMenu();
+    runIntro(() => { sessionStorage.getItem('bgc_pos_auth') === 'true' ? unlock() : showAuth(); });
 
     // 5. Setup ticker
     if (window.restaurantState.runtimeInterval) clearInterval(window.restaurantState.runtimeInterval);
     window.restaurantState.runtimeInterval = setInterval(() => {
         document.querySelectorAll('[data-table-timer]').forEach(el => {
-            const tableId = parseInt(el.getAttribute('data-table-timer'), 10);
+            const tableId = el.getAttribute('data-table-timer');
             const table = window.restaurantState.tables.find(t => t.id === tableId);
             if (table && table.sessionStart && table.status !== 'available') {
                 el.textContent = formatDuration(table.sessionStart);
@@ -749,7 +762,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         if (window.restaurantState.currentView === 'menuView' && window.restaurantState.selectedTableId) {
-            const selectedTable = window.restaurantState.tables.find(t => t.id === Number(window.restaurantState.selectedTableId));
+            const selectedTable = window.restaurantState.tables.find(t => t.id === window.restaurantState.selectedTableId);
             const kotTimer = document.getElementById('kot-timer');
             if (selectedTable && selectedTable.sessionStart && kotTimer) {
                 kotTimer.innerHTML = `<i class="fa-regular fa-clock text-[10px]"></i> <span>${formatDuration(selectedTable.sessionStart)}</span>`;

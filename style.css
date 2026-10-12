@@ -1,124 +1,117 @@
 :root {
-    --bg-dark: #0a0a0a;
-    --panel-bg: #121212;
-    --panel-border: rgba(255, 255, 255, 0.08);
+    --bg-dark: #1c1411;
+    --panel-bg: rgba(42, 32, 27, 0.8);
+    --panel-border: rgba(243, 230, 211, 0.1);
+    --caramel: #e8a54b;
 }
 
 body {
     font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
     background-color: var(--bg-dark);
+    background-image:
+        radial-gradient(circle at 15% 10%, rgba(232, 165, 75, 0.14), transparent 45%),
+        radial-gradient(circle at 85% 90%, rgba(176, 96, 64, 0.16), transparent 50%);
+    background-attachment: fixed;
 }
+header h1, .intro-title { font-family: 'Fredoka', 'Plus Jakarta Sans', sans-serif; }
+
+/* Live background canvas sits behind everything and never blocks clicks */
+#bgCanvas { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+#pos-container { transition: opacity 0.6s ease; }
+#pos-container.locked { opacity: 0; pointer-events: none; }
 
 .pos-panel {
     background: var(--panel-bg);
     border: 1px solid var(--panel-border);
 }
 
+/* Intro */
+#intro {
+    background: radial-gradient(circle at 50% 45%, rgba(28, 20, 17, 0.55), rgba(28, 20, 17, 0.92));
+    transition: opacity 0.7s ease, visibility 0.7s;
+    cursor: pointer;
+}
+#intro.out { opacity: 0; visibility: hidden; }
+.intro-pad { font-size: 3.2rem; color: var(--caramel); animation: padBob 1.6s ease-in-out infinite; }
+.intro-title {
+    font-size: clamp(2.2rem, 8vw, 5.5rem);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: #f3e6d3;
+    text-shadow: 0 0 18px rgba(232, 165, 75, 0.55), 0 0 48px rgba(232, 165, 75, 0.3);
+}
+.intro-title span {
+    display: inline-block;
+    opacity: 0;
+    transform: translateY(24px) scale(0.8);
+    animation: letterIn 0.6s cubic-bezier(0.2, 0.9, 0.3, 1.3) forwards;
+}
+.intro-sub { margin-top: 1rem; color: #d3bb9b; opacity: 0; animation: fadeIn 0.8s 1.9s forwards; }
+.intro-bar { width: min(260px, 60vw); height: 3px; margin-top: 1.5rem; background: rgba(243, 230, 211, 0.12); border-radius: 2px; overflow: hidden; }
+.intro-bar i { display: block; height: 100%; width: 0; background: var(--caramel); animation: loadBar 3.2s 0.2s ease-out forwards; }
+.intro-skip { margin-top: 1rem; font-size: 0.7rem; color: #8f7560; }
+@keyframes letterIn { to { opacity: 1; transform: none; } }
+@keyframes fadeIn { to { opacity: 1; } }
+@keyframes loadBar { to { width: 100%; } }
+@keyframes padBob { 0%, 100% { transform: translateY(0) rotate(-6deg); } 50% { transform: translateY(-8px) rotate(6deg); } }
+
+.shake { animation: shake 0.4s; }
+@keyframes shake { 20%, 60% { transform: translateX(-8px); } 40%, 80% { transform: translateX(8px); } }
+
+/* Toast */
+#toast {
+    position: fixed; left: 50%; bottom: 28px; z-index: 70;
+    transform: translate(-50%, 20px); opacity: 0; pointer-events: none;
+    padding: 0.7rem 1.1rem; border-radius: 0.75rem; font-size: 0.8rem;
+    background: #f3e6d3; color: #2a201b; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    transition: opacity 0.25s, transform 0.25s; max-width: 90vw; text-align: center;
+}
+#toast.show { opacity: 1; transform: translate(-50%, 0); }
+
 /* Strict View Controllers */
-.view {
-    display: none !important;
+.view { display: none !important; }
+.view.active { display: block !important; }
+#billingView.view.active { display: flex !important; }
+
+/* Zone tabs */
+.zone-tab {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    padding: 0.5rem 0.9rem; border-radius: 0.75rem; font-size: 0.75rem; font-weight: 500;
+    color: #d3bb9b; background: rgba(42, 32, 27, 0.75); border: 1px solid var(--panel-border);
+    cursor: pointer; transition: all 0.15s ease;
 }
-.view.active {
-    display: block !important;
-}
-#billingView.view.active {
-    display: flex !important;
-}
+.zone-tab:hover { color: #f3e6d3; border-color: rgba(232, 165, 75, 0.4); }
+.zone-tab.active { background: rgba(232, 165, 75, 0.18); color: #f4c680; border-color: rgba(232, 165, 75, 0.55); }
+.zone-count { min-width: 1.1rem; padding: 0 0.3rem; border-radius: 999px; background: #e8a54b; color: #2a201b; font-size: 0.65rem; font-weight: 700; text-align: center; }
 
 /* Category Navigation */
-.category-link {
-    transition: all 0.15s ease-in-out;
-}
-.category-link.active {
-    background-color: rgba(245, 158, 11, 0.1);
-    color: #f59e0b;
-    font-weight: 600;
-}
+.category-link { transition: all 0.15s ease-in-out; }
+.category-link.active { background-color: rgba(232, 165, 75, 0.14); color: #f4c680; font-weight: 600; }
 
-/* Table Floor Plan Cards */
+/* Table cards: free=white, booked=green, running=orange, billing=sky, paid=red */
 .table-card {
-    position: relative;
-    aspect-ratio: 1 / 1;
-    border-radius: 0.875rem;
-    padding: 0.875rem;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    transition: transform 0.15s ease, border-color 0.15s ease;
-    cursor: pointer;
-    background-color: #121212;
+    position: relative; aspect-ratio: 1 / 1; border-radius: 0.875rem; padding: 0.875rem;
+    display: flex; flex-direction: column; justify-content: space-between;
+    transition: transform 0.15s ease, box-shadow 0.15s ease; cursor: pointer;
+    background-color: rgba(42, 32, 27, 0.82);
 }
-
-.table-card:hover {
-    transform: translateY(-2px);
-}
-
-/* Status Treatments */
-.table-card.available {
-    border: 1px solid rgba(16, 185, 129, 0.25);
-}
-.table-card.available:hover {
-    border-color: rgba(16, 185, 129, 0.5);
-}
-
-.table-card.occupied {
-    border: 1px solid rgba(245, 158, 11, 0.35);
-    background: rgba(245, 158, 11, 0.03);
-}
-.table-card.occupied:hover {
-    border-color: rgba(245, 158, 11, 0.6);
-}
-
-.table-card.reserved {
-    border: 1px solid rgba(6, 182, 212, 0.35);
-    background: rgba(6, 182, 212, 0.03);
-}
-
-.table-card.billing {
-    border: 1px solid rgba(244, 63, 94, 0.4);
-    background: rgba(244, 63, 94, 0.04);
-}
+.table-card:hover { transform: translateY(-2px); }
+.table-card:active { transform: scale(0.97); }
+.table-card.available { border: 1px solid rgba(255, 255, 255, 0.6); background: rgba(255, 255, 255, 0.07); }
+.table-card.reserved  { border: 1px solid rgba(52, 211, 153, 0.7);  background: rgba(52, 211, 153, 0.1);  box-shadow: 0 0 18px rgba(52, 211, 153, 0.12); }
+.table-card.occupied  { border: 1px solid rgba(251, 146, 60, 0.75); background: rgba(251, 146, 60, 0.1);  box-shadow: 0 0 18px rgba(251, 146, 60, 0.14); }
+.table-card.billing   { border: 1px solid rgba(56, 189, 248, 0.75); background: rgba(56, 189, 248, 0.1);  box-shadow: 0 0 18px rgba(56, 189, 248, 0.14); }
+.table-card.paid      { border: 1px solid rgba(239, 68, 68, 0.8);   background: rgba(239, 68, 68, 0.11);  box-shadow: 0 0 18px rgba(239, 68, 68, 0.16); }
 
 /* Receipt Styling */
 .receipt-container {
-    background-color: #ffffff;
-    color: #111827;
-    font-family: 'JetBrains Mono', monospace;
-    width: 100%;
-    max-width: 360px;
-    padding: 1.5rem;
-    border-radius: 0.75rem;
+    background-color: #fffaf1; color: #111827; font-family: 'JetBrains Mono', monospace;
+    width: 100%; max-width: 360px; padding: 1.5rem; border-radius: 0.75rem;
 }
-
-.receipt-header h2 {
-    font-size: 1.15rem;
-    font-weight: 700;
-    text-align: center;
-}
-.receipt-header p, .receipt-footer p {
-    font-size: 0.725rem;
-    text-align: center;
-    color: #4b5563;
-    line-height: 1.35;
-}
-
-.receipt-divider {
-    border-top: 1px dashed #d1d5db;
-    margin: 0.75rem 0;
-}
-
-.receipt-table {
-    font-size: 0.75rem;
-}
-.receipt-table th {
-    font-weight: 600;
-    padding: 0.25rem 0;
-}
-.receipt-table td {
-    padding: 0.25rem 0;
-}
-
-.summary-table td {
-    font-size: 0.775rem;
-    padding: 0.15rem 0;
-}
+.receipt-header h2 { font-size: 1.15rem; font-weight: 700; text-align: center; }
+.receipt-header p, .receipt-footer p { font-size: 0.725rem; text-align: center; color: #4b5563; line-height: 1.35; }
+.receipt-divider { border-top: 1px dashed #d1d5db; margin: 0.75rem 0; }
+.receipt-table { font-size: 0.75rem; }
+.receipt-table th { font-weight: 600; padding: 0.25rem 0; }
+.receipt-table td { padding: 0.25rem 0; }
+.summary-table td { font-size: 0.775rem; padding: 0.15rem 0; }
